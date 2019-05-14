@@ -1,0 +1,7 @@
+- name: Renew Windows license
+  win_shell: cscript slmgr.vbs -rearm
+  args:
+    chdir: C:\Windows\System32\
+
+- name: Reboot machine
+  win_reboot:

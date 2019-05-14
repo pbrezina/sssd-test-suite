@@ -224,6 +224,14 @@ class EnrollCommand(Command):
         self.ansible.run('enroll.yml', ['all'], params)
 
 
+class RearmCommand(Command):
+    def __init__(self, subparser, name, help):
+        super().__init__(subparser, name, help)
+
+    def run(self, args, params=[]):
+        self.ansible.run('rearm-windows-license.yml', ['all'], params)
+
+
 class PruneBoxCommand(Command):
     def __init__(self, subparser, name, help):
         super().__init__(subparser, name, help)
@@ -700,6 +708,7 @@ def main():
     ProvisionHostCommand(subparser, 'provision-host', 'Provision host machine')
     ProvisionGuestsCommand(subparser, 'provision', 'Provision guests machines')
     EnrollCommand(subparser, 'enroll', 'Enroll client to all domains')
+    RearmCommand(subparser, 'rearm', 'Renew Windows evaluation license')
     BasicVagrantCommand(subparser, 'update', 'Update vagrant box', command=['box', 'update'])
     PruneBoxCommand(subparser, 'prune', 'Delete outdated vagrant boxes')
     CreateBoxCommand(subparser, 'create-box', 'Create vagrant box')
