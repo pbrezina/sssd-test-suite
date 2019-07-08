@@ -29,10 +29,10 @@ from collections import OrderedDict
 
 class ShellScriptError(subprocess.CalledProcessError):
     def __init__(self, returncode, cmd, script=None,
-                 cwd=None, env={}, output=None, stderr=None):
+                 cwd=None, env=None, output=None, stderr=None):
         super().__init__(returncode, cmd,  output, stderr)
         self.cwd = cwd if cwd is not None else os.getcwd()
-        self.env = env
+        self.env = env if env is not None else {}
         self.script = script
 
     def flat_env(self):
@@ -48,9 +48,9 @@ class Shell(object):
     PrintCommand = False
     DryRun = False
 
-    def __init__(self, cwd=None, env={}, clear_env=False, shell='/bin/bash'):
+    def __init__(self, cwd=None, env=None, clear_env=False, shell='/bin/bash'):
         self.cwd = cwd
-        self.env = self.__get_ordered(env)
+        self.env = self.__get_ordered(env) if env is not None else self.__get_ordered({})
         self.clear_env = clear_env
         self.shell = shell
 
@@ -92,7 +92,9 @@ class Shell(object):
 
         return [self.shell, '-c', textwrap.dedent(script)]
 
-    def __print_command(self, command, env={}):
+    def __print_command(self, command, env=None):
+        env = env if env is not None else {}
+
         flatenv = ' '.join(
             '%s=%r' % (key, value) for key, value in env.items()
         )

@@ -55,10 +55,10 @@ class Task(object):
 
 
 class TaskList(object):
-    def __init__(self, runner, name=None, tasks=[]):
+    def __init__(self, runner, name=None, tasks=None):
         self.runner = runner
         self.name = name
-        self.tasks = tasks
+        self.tasks = tasks if tasks is not None else []
 
     def add(self, name, handler, *args, **kwargs):
         self.tasks.append(Task(name, handler, *args, **kwargs))

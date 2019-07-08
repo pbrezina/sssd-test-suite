@@ -69,10 +69,10 @@ class Actor(object):
     def call(self, command, *args, **kwargs):
         self.runner.call(command, *args, **kwargs)
 
-    def tasklist(self, name=None, tasks=[]):
+    def tasklist(self, name=None, tasks=None):
         return TaskList(self.runner, name, tasks)
 
-    def run(self, args={}):
+    def run(self):
         raise NotImplementedError("run() method is not implemented")
 
 
@@ -103,8 +103,8 @@ class Command(object):
 
 
 class CommandParser(object):
-    def __init__(self, items=[], title=None, metavar='COMMANDS', **kwargs):
-        self.items = items
+    def __init__(self, items=None, title=None, metavar='COMMANDS', **kwargs):
+        self.items = items if items is not None else []
         self.title = title
         self.metavar = metavar
         self.kwargs = kwargs
@@ -139,7 +139,7 @@ class CommandParser(object):
 
 
 class CommandGroup(CommandParser):
-    def __init__(self, title, items=[], **kwargs):
+    def __init__(self, title, items=None, **kwargs):
         super().__init__(items, title=title, **kwargs)
 
     def setup_parser(self, parent_parser):
@@ -153,7 +153,7 @@ class CommandGroup(CommandParser):
 
 
 class CommandList(CommandParser):
-    def __init__(self, items=[]):
+    def __init__(self, items=None):
         super().__init__(items)
 
     def setup_parser(self, parent_parser):
@@ -207,8 +207,9 @@ class Runner:
 
         return 0
 
-    def call(self, command, args=None, argv=[], **kwargs):
+    def call(self, command, args=None, argv=None, **kwargs):
         handler = command() if inspect.isclass(command) else command
+        argv = argv if argv is not None else []
 
         args = copy.copy(args) if args is not None else argparse.Namespace()
         for name in kwargs:

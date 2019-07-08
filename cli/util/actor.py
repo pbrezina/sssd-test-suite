@@ -39,7 +39,10 @@ class TestSuiteActor(Actor):
             self.root_dir + '/config.json'
         )
 
-    def ansible(self, playbook, unattended, limit=[], argv=[], **kwargs):
+    def ansible(self, playbook, unattended, limit=None, argv=None, **kwargs):
+        limit = limit if limit is not None else []
+        argv = argv if argv is not None else []
+
         env = {
             'ANSIBLE_SSH_ARGS': '-o UserKnownHostsFile=/dev/null '
                                 '-o IdentitiesOnly=yes '
@@ -63,7 +66,10 @@ class TestSuiteActor(Actor):
 
         return Shell().run(['ansible-playbook'] + args, env=env, **kwargs)
 
-    def vagrant(self, config, command, args=[], argv=[], env={}, **kwargs):
+    def vagrant(self, config, command, args=None, argv=None, env=None, **kwargs):
+        argv = argv if argv is not None else []
+        env = env if env is not None else {}
+
         env = env.copy()
         env.update({
             'VAGRANT_CWD': self.root_dir,

@@ -89,7 +89,10 @@ class VagrantCloud:
 
         response.raise_for_status()
 
-    def api_get(self, endpoint, args={}, params={}):
+    def api_get(self, endpoint, args=None, params=None):
+        args = args if args is not None else {}
+        params = params if params is not None else {}
+
         r = requests.get(
             endpoint.format(**args, url=self.url),
             headers=self.authheader,
@@ -99,7 +102,11 @@ class VagrantCloud:
         self.api_error(r)
         return r
 
-    def api_post(self, endpoint, data, args={}, params={}, headers={}, isjson=True):
+    def api_post(self, endpoint, data, args=None, params=None, headers=None, isjson=True):
+        args = args if args is not None else {}
+        params = params if params is not None else {}
+        headers = headers if headers is not None else {}
+
         (data, type) = self.process_data(data, isjson)
 
         r = requests.post(
@@ -112,7 +119,11 @@ class VagrantCloud:
         self.api_error(r)
         return r
 
-    def api_put(self, endpoint, data, args={}, params={}, headers={}, isjson=True):
+    def api_put(self, endpoint, data, args=None, params=None, headers=None, isjson=True):
+        args = args if args is not None else {}
+        params = params if params is not None else {}
+        headers = headers if headers is not None else {}
+
         (data, type) = self.process_data(data, isjson)
 
         r = requests.put(
@@ -125,7 +136,10 @@ class VagrantCloud:
         self.api_error(r)
         return r
 
-    def api_delete(self, endpoint, args={}, params={}):
+    def api_delete(self, endpoint, args=None, params=None):
+        args = args if args is not None else {}
+        params = params if params is not None else {}
+
         r = requests.delete(
             endpoint.format(**args, url=self.url),
             headers=self.authheader,
@@ -143,7 +157,9 @@ class VagrantCloud:
 
         return (data, {})
 
-    def object_exists(self, endpoints, args={}):
+    def object_exists(self, endpoints, args=None):
+        args = args if args is not None else {}
+
         r = requests.get(
             endpoints['get'].format(**args, url=self.url),
             headers=self.authheader
@@ -157,7 +173,9 @@ class VagrantCloud:
 
         r.raise_for_status()
 
-    def object_create(self, endpoints, data, args={}):
+    def object_create(self, endpoints, data, args=None):
+        args = args if args is not None else {}
+
         if self.object_exists(endpoints, args=args):
             self.api_put(endpoints['update'], data, args=args)
             return
