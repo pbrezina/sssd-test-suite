@@ -67,6 +67,7 @@ class TestSuiteActor(Actor):
         return Shell().run(['ansible-playbook'] + args, env=env, **kwargs)
 
     def vagrant(self, config, command, args=None, argv=None, env=None, **kwargs):
+        args = args if args is not None else []
         argv = argv if argv is not None else []
         env = env if env is not None else {}
 

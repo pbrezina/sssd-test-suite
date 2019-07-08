@@ -19,9 +19,12 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import tempfile
 import textwrap
+import yaml
 
 from commands.box import PruneBoxActor
+from commands.vagrant import VagrantCommandActor
 from lib.command import CommandList, Command
 from util.actor import TestSuiteActor
 
@@ -46,65 +49,127 @@ class RunTestsActor(TestSuiteActor):
         )
 
         parser.add_argument(
+            '--suite', action='store', type=str, dest='suite',
+            help='Path to test suite yaml configuration.',
+            required=False
+        )
+
+        parser.add_argument(
             '--prune', action='store_true', dest='prune',
             help='Remove outdated boxes after update.'
         )
 
         parser.epilog = textwrap.dedent('''
-        This command will run existing SSSD tests by executing
-        sssd/contrib/test-suite/run-tests.sh.
-
-        Existing 'client' machine will be destroyed and replaced with new one.
-        Currently, all tests are run only on the client machine so it is the
-        only guest that this command touches.
+        This command will execute tests described in yaml configuration file.
+        This file can be specified with --suite parameter. If not set,
+        $sssd/contrib/test-suite/test-suite.yml is used.
         ''')
 
     def run(self, args):
-        tasks = self.tasklist('Tests')
+        suite = self.load_test_suite(args)
 
+        prepare = self.tasklist('Preparation')
+        prepare.add('Creating artifacts directory', self.create_artifacts_dir, args)
         if args.update:
-            tasks.add('Updating boxes', self.update, args)
-
+            prepare.add('Updating boxes', self.update, suite, args)
         if args.prune:
-            tasks.add('Removing outdated boxes', self.prune, args)
+            prepare.add('Removing outdated boxes', self.prune, args)
+        prepare.run()
 
-        tasks.add('Creating artifacts directory', self.create_artifacts_dir, args)
-        tasks.add('Destroying current client', self.destroy, args)
-        tasks.add('Starting client', self.up, args)
-        tasks.add('Running tests', self.run_tests, args)
-        tasks.add('Halting client', self.halt, args)
-        tasks.run()
+        testcases = self.tasklist('Test Case')
+        for testcase in suite:
+            testcases.add(testcase['name'], self.test_case, testcase, args)
+        testcases.run()
 
-    def update(self, task, args):
-        self.vagrant(args.config, 'box update', ['client'])
+    def load_test_suite(self, args):
+        suite = args.suite if args.suite else '{}/contrib/test-suite/test-suite.yml'.format(args.sssd)
+        with open(suite) as f:
+            return yaml.safe_load(f)
+    
+    def update(self, task, suite, args):
+        machines = set()
+        for case in suite:
+            machines.update(case.get('machines', []))
+        
+        machines = list(machines)
+        self.call(VagrantCommandActor('box update'), config=args.config, sequence=False, guests=machines)
 
     def prune(self, task, args):
-        self.call(PruneBoxActor(), args)
-
-    def destroy(self, task, args):
-        self.vagrant(args.config, 'destroy', ['client'])
-
-    def up(self, task, args):
-        self.vagrant(args.config, 'up', ['client'],
-            env={
-                'SSSD_TEST_SUITE_RSYNC': '{}:/shared/sssd'.format(args.sssd),
-                'SSSD_TEST_SUITE_SSHFS': '{}:/shared/artifacts'.format(args.artifacts)
-            },
-            clear_env=True
-        )
-
-    def halt(self, task, args):
-        self.vagrant(args.config, 'halt', ['client'])
+        self.call(PruneBoxActor(), config=args.config)
 
     def create_artifacts_dir(self, task, args):
         self.shell(['mkdir', '-p', args.artifacts])
 
-    def run_tests(self, task, args):
-        self.vagrant(
-            args.config, 'ssh', ['client'],
-            ['/shared/sssd/contrib/test-suite/run-tests.sh']
-        )
+    def test_case(self, task, testcase, args):
+        machines = testcase['machines']
 
+        tasks = self.tasklist('Test Case: {}'.format(testcase['name']))
+        tasks.add('Destroying current guests: {}'.format(machines), self.destroy, machines, args)
+        tasks.add('Starting up guests: {}'.format(machines), self.up, machines, args)
+        for test in testcase.get('tasks', []):
+            tasks.add(test.get('name', ''), self.test, test, args)
+        tasks.add('Halting machines', self.halt, machines, args)
+        tasks.run()
+    
+    def destroy(self, task, machines, args):
+        return
+        self.call(VagrantCommandActor('destroy'), config=args.config, sequence=False, guests=machines)
+
+    def up(self, task, machines, args):
+        return
+        for machine in machines:
+            self.vagrant(args.config, 'up', [machine],
+                env={
+                    'SSSD_TEST_SUITE_RSYNC': '{}:/shared/sssd'.format(args.sssd),
+                    'SSSD_TEST_SUITE_SSHFS': '{}:/shared/artifacts'.format(args.artifacts)
+                },
+                clear_env=True
+            )
+
+    def test(self, task, test, args):
+            try:
+                with open('{}/.suite-command'.format(self.root_dir), 'w') as f:
+                    
+            self.vagrant(
+                    args.config, 'ssh', [machine],
+                    ['echo', command, '>', '.suite.run.sh']
+                )
+        
+        upload_command(test['machine'], test['script'])
+        import sys
+        sys.exit(0)
+            
+        try:
+            if 'directory' in test:
+                command = 'cd {} && {}'.format(test['directory'], test['script'])
+            else:
+                command = test['script']
+            
+            self.vagrant(
+                args.config, 'ssh', [test['machine']],
+                ['bash', '-c', command]
+            )
+        finally:
+            command = ''
+            for artifact in test.get('artifacts', []):
+                command += 'cp {} /shared/artifacts ; '.format(artifact)
+            
+            if command:
+                self.vagrant(
+                    args.config, 'ssh', [test['machine']],
+                    ['bash', '-c', command]
+                )
+
+    def halt(self, task, machines, args):
+        self.call(VagrantCommandActor('halt'), config=args.config, sequence=False, guests=machines)
+
+    def run_command(self, machine, directory, command):
+        with tempfile.TemporaryFile() as f:
+            if directory:
+                f.write('cd {} || exit 1\n\n'.format(directory))
+
+            f.write(command)
+            self.shell('scp -i {}/.vagrant/{}/client/libvirt/private_key fedora@')
 
 Commands = CommandList([
     Command('run', 'Run SSSD tests', RunTestsActor),
