@@ -191,7 +191,7 @@ class RunTestsActor(TestSuiteActor):
         paths = {}
         for item in artifacts:
             if type(item) == dict:
-                files = get_list(paths, item.get('machine', guest))
+                files = get_list(paths, item.get('from', guest))
                 for path in item.get('files', []):
                     files.append(path)
                 continue
