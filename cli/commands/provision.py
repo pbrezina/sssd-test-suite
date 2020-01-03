@@ -157,7 +157,7 @@ class EnrollActor(TestSuiteActor):
         ]).run()
 
     def up(self, task, args):
-        self.call(VagrantCommandActor('up'))
+        self.call(VagrantCommandActor('up'), args)
 
     def enroll(self, task, args, argv):
         if 'all' in args.guests:
