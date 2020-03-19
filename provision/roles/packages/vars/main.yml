@@ -1,0 +1,6 @@
+rhel8: {
+  url: -,
+  version: 8.3.0,
+  compose: 20200506.n.0,
+  buildroot: 'latest-BUILDROOT-8.3.0-RHEL-8'
+}
