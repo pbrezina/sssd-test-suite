@@ -12,6 +12,23 @@
   package:
     state: present
     name:
+    - ansible
     - dnsmasq
+    - gcc
+    - libguestfs-tools-c
+    - libselinux-python3
     - libvirt
+    - libvirt-daemon-kvm
+    - libvirt-devel
+    - libxml2-devel
+    - libxslt-devel
     - NetworkManager
+    - python3-clint
+    - python3-dnf
+    - python3-requests
+    - python3-requests-toolbelt
+    - python3-winrm
+    - qemu-kvm
+    - ruby-devel
+    - rubygem-nokogiri
+    - rubygem-ruby-libvirt
